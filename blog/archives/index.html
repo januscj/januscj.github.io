@@ -9,9 +9,9 @@
   <meta name="author" content="Chin">
 
   
-  <meta name="description" content=" Blog Archive 2013 hello word
+  <meta name="description" content="Blog Archive 2013 hello word
 Sep 21 2013 Test
-Sep 21 2013 posted in web develop Categories web develop (1) Recent Posts Hello Word Test ">
+Sep 21 2013 posted in web develop Categories web develop (1) Recent Posts Hello Word Test 近期回覆 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -133,6 +133,32 @@ Sep 21 2013 posted in web develop Categories web develop (1) Recent Posts Hello 
   </ul>
 </section>
 
+<section>
+  <h1>近期回覆</h1>
+  <script type="text/javascript">
+    function recent_comments(obj){
+      if(obj.response.length){
+        resault = '<ul>';
+        obj.response.forEach(function(response){
+          resault += '<li>';
+          resault += '<a href="'+response.author.profileUrl+'"><img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;"></a>';
+          resault += '<a href="'+response.author.profileUrl+'">'+response.author.name+'</a>：';
+          resault += '<span>'+response.message+'</span><br>'
+          resault += '<a href="'+response.thread.link+'">'+response.thread.title+'</a><br>'
+          resault += 'at <a href="'+response.url+'">'+response.createdAt+'</a>'
+          resault += '</li>';
+        });
+        resault += '</ul>';
+        document.write(resault);
+      }else{
+        document.write("目前沒有回覆");
+      }
+    };
+  </script>
+  <script type="text/javascript" src="http://disqus.com/api/3.0/forums/listPosts.jsonp?forum=Chin1985&api_key=IVQOSOjZknRNZi3rYa3gxFA5CCLjuGP9ojHi3TSeUenFl2mckhh3gl9k9NqGDetu&related=thread&callback=recent_comments"></script>
+</section>
+
+
 
 
 
@@ -152,7 +178,7 @@ Sep 21 2013 posted in web develop Categories web develop (1) Recent Posts Hello 
   
 
 <script type="text/javascript">
-      var disqus_shortname = 'Chin1985';
+      var disqus_shortname = 'blogofchin';
       
         
         var disqus_script = 'count.js';
