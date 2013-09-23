@@ -4,7 +4,7 @@
   <title><![CDATA[Chin的博客]]></title>
   <link href="http://januscj.github.io/atom.xml" rel="self"/>
   <link href="http://januscj.github.io/"/>
-  <updated>2013-09-23T23:24:43+08:00</updated>
+  <updated>2013-09-23T23:26:04+08:00</updated>
   <id>http://januscj.github.io/</id>
   <author>
     <name><![CDATA[Chin]]></name>
@@ -108,7 +108,7 @@
 </span><span class='line'>         <span class="nt">&lt;/ul&gt;</span>
 </span><span class='line'>     <span class="nt">&lt;/div&gt;</span>
 </span><span class='line'> <span class="nt">&lt;/body&gt;</span>
-</span><span class='line'><span class="err">&lt;</span>/html
+</span><span class='line'><span class="nt">&lt;/html&gt;</span>
 </span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
