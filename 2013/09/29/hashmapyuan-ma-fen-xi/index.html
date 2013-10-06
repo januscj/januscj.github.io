@@ -222,7 +222,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通关HashIterator的构造方法和nextEntry方法知:<strong>entrySet是按深度优先遍历的</strong>，即构造完之后next会指向第一个不为null的元素，迭代的时候nextEntry返回当前元素，在结束的时候
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通关HashIterator的构造方法和nextEntry方法知:<b>entrySet是按深度优先遍历的</b>，即构造完之后next会指向第一个不为null的元素，迭代的时候nextEntry返回当前元素，在结束的时候
 next指向下一个不为空的元素，没有元素，则next为null，依次往下遍历直到next为null。 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;此外key和value的迭代hashmap都是以此类作为父类，写了自己的实现类。key的迭代类KeyIterator:</p>
 
