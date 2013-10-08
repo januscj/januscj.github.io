@@ -4,7 +4,7 @@
   <title><![CDATA[分类:jdk源码阅读 | Chin的博客]]></title>
   <link href="http://januscj.github.io/categories/jdkyuan-ma-yue-du/atom.xml" rel="self"/>
   <link href="http://januscj.github.io/"/>
-  <updated>2013-10-06T23:30:43+08:00</updated>
+  <updated>2013-10-08T22:38:02+08:00</updated>
   <id>http://januscj.github.io/</id>
   <author>
     <name><![CDATA[Chin]]></name>
@@ -168,9 +168,9 @@
 </pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="n">header</span><span class="o">.</span><span class="na">before</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="na">after</span> <span class="o">=</span> <span class="n">header</span><span class="o">;</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div>  <br/>
 即这个双向链表初始化完之后，只有一个header节点，header节点的key、value都为null。初始化完之后的结构是这样的：<br/>
-<img src="images/linkedhashmap1.jpg"><br/>
+<img src="/images/linkedhashmap1.jpg"><br/>
 再向LinkedHashMap添加一个元素之后的结构是这样的：<br/><br/>
-<img src="images/linkedhashmap2.jpg"><br/>
+<img src="/images/linkedhashmap2.jpg"><br/>
 依次类推，最近添加的节点在最前面，紧跟在header节点之后。LinkedHashMap双向链表元素的添加主要是下面这段代码：</p>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
