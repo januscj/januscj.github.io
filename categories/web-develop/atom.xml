@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[分类:web develop | Chin的博客]]></title>
+  <link href="http://januscj.github.io/categories/web-develop/atom.xml" rel="self"/>
+  <link href="http://januscj.github.io/"/>
+  <updated>2013-10-08T22:38:02+08:00</updated>
+  <id>http://januscj.github.io/</id>
+  <author>
+    <name><![CDATA[Chin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[bootstrap常用组件]]></title>
+    <link href="http://januscj.github.io/2013/09/23/bootstrapchang-yong-zu-jian/"/>
+    <updated>2013-09-23T23:17:00+08:00</updated>
+    <id>http://januscj.github.io/2013/09/23/bootstrapchang-yong-zu-jian</id>
+    <content type="html"><![CDATA[<ul>
+<li>suggest控件 <a href="http://nicolasbize.github.io/magicsuggest/" target="_blank">magicsuggest</a></li>
+<li>即时编辑控件 <a href="http://vitalets.github.io/x-editable/" target="_blank">xeditable</a></li>
+<li>日期时间控件 <a href="http://tarruda.github.io/bootstrap-datetimepicker/" target="_blank">datetimepicker</a></li>
+<li>可编辑表格控件 <a href="https://github.com/warpech/jquery-handsontable/" target="_blank">handsontable</a></li>
+<li>分页控件
+<div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'> <span class="ni">&amp;lt;</span>!DOCTYPE html&gt;
+</span><span class='line'><span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'><span class="nt">&lt;head&gt;</span>
+</span><span class='line'>   <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">&quot;utf-8&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'><span class="nt">&lt;link</span> <span class="na">id=</span><span class="s">&quot;bootstrap_221&quot;</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">type=</span><span class="s">&quot;text/css&quot;</span> <span class="na">class=</span><span class="s">&quot;library&quot;</span> <span class="na">href=</span><span class="s">&quot;http://januscj.github.io/js/sandbox/bootstrap-2.2.1/css/bootstrap.min.css&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'><span class="nt">&lt;/head&gt;</span>
+</span><span class='line'><span class="nt">&lt;style&gt;</span>
+</span><span class='line'><span class="nc">.pagination</span> <span class="nt">ul</span> <span class="o">&gt;</span> <span class="nt">li</span> <span class="o">&gt;</span> <span class="nt">input</span><span class="p">{</span>
+</span><span class='line'>       <span class="k">vertical-align</span><span class="o">:</span> <span class="k">top</span><span class="p">;</span>
+</span><span class='line'>       <span class="o">-</span><span class="n">webkit</span><span class="o">-</span><span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>        <span class="o">-</span><span class="n">moz</span><span class="o">-</span><span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>             <span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">height</span><span class="o">:</span><span class="k">auto</span><span class="p">;</span>
+</span><span class='line'>       <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="k">height</span><span class="o">:</span> <span class="m">20px</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">margin-bottom</span><span class="o">:</span><span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">background-color</span><span class="o">:</span> <span class="m">#fff</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">border-left-width</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">width</span><span class="o">:</span><span class="m">40px</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">float</span><span class="o">:</span><span class="k">left</span><span class="p">;</span>
+</span><span class='line'>       <span class="k">min-height</span><span class="o">:</span> <span class="k">auto</span><span class="p">;</span>
+</span><span class='line'>       <span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;</span><span class="k">min-height</span><span class="o">:</span> <span class="m">20px</span><span class="p">;</span>
+</span><span class='line'>   <span class="p">}</span>
+</span><span class='line'><span class="nt">&lt;/style&gt;</span>
+</span><span class='line'><span class="nt">&lt;body&gt;</span>
+</span><span class='line'>   <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">&quot;pagination pagination-right&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>       <span class="nt">&lt;ul&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;&lt;i</span> <span class="na">class=</span><span class="s">&quot;icon-fast-backward&quot;</span><span class="nt">&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>Previous<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>1<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>2<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>3<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>4<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>5<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>Next<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;&lt;i</span> <span class="na">class=</span><span class="s">&quot;icon-fast-forward&quot;</span><span class="nt">&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">class=</span><span class="s">&quot;input&quot;</span><span class="nt">&gt;&lt;/li&gt;</span>
+</span><span class='line'>           <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;javascript:void();&quot;</span> <span class="na">onclick=</span><span class="s">&quot;&quot;</span><span class="nt">&gt;</span>Go<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>       <span class="nt">&lt;/ul&gt;</span>
+</span><span class='line'>   <span class="nt">&lt;/div&gt;</span>
+</span><span class='line'><span class="nt">&lt;/body&gt;</span>
+</span><span class='line'><span class="nt">&lt;/html&gt;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[分类:架构 | Chin的博客]]></title>
+  <link href="http://januscj.github.io/categories/jia-gou/atom.xml" rel="self"/>
+  <link href="http://januscj.github.io/"/>
+  <updated>2013-10-08T22:38:02+08:00</updated>
+  <id>http://januscj.github.io/</id>
+  <author>
+    <name><![CDATA[Chin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[用redis实现分布式锁]]></title>
+    <link href="http://januscj.github.io/2013/09/24/yong-redisshi-xian-fen-bu-shi-suo/"/>
+    <updated>2013-09-24T19:17:00+08:00</updated>
+    <id>http://januscj.github.io/2013/09/24/yong-redisshi-xian-fen-bu-shi-suo</id>
+    <content type="html"><![CDATA[<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">lock</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span class='line'><span class="k">while</span> <span class="n">lock</span> <span class="o">!=</span> <span class="mi">1</span><span class="o">:&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">current</span> <span class="n">Unix</span> <span class="n">time</span> <span class="o">+</span> <span class="n">lock</span> <span class="n">timeout</span> <span class="o">+</span> <span class="mi">1</span>
+</span><span class='line'><span class="n">lock</span> <span class="o">=</span> <span class="n">SETNX</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span> <span class="n">timestamp</span>
+</span><span class='line'><span class="k">if</span> <span class="n">lock</span> <span class="o">==</span> <span class="mi">1</span> <span class="n">or</span> <span class="o">(</span><span class="n">now</span><span class="o">()</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="o">(</span><span class="n">GET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span><span class="o">)</span> <span class="n">and</span> <span class="n">now</span><span class="o">()</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="o">(</span><span class="n">GETSET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span> <span class="n">timestamp</span><span class="o">)):</span>
+</span><span class='line'>    <span class="k">break</span><span class="o">;</span>
+</span><span class='line'><span class="k">else</span><span class="o">:</span>
+</span><span class='line'>    <span class="n">sleep</span><span class="o">(</span><span class="mi">10</span><span class="n">ms</span><span class="o">)</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">do_job</span><span class="o">()&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">if</span> <span class="n">now</span><span class="o">()</span> <span class="o">&amp;</span><span class="n">lt</span><span class="o">;</span> <span class="n">GET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span><span class="o">:&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">DEL</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+]]></content>
+  </entry>
+  
+</feed>

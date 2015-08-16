@@ -4,12 +4,14 @@
 <!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
+  <meta name="google-site-verification" content="XNhpqzXVIB5uUMBIpoMxWe2ttaIuUAkMEXlHxX6ox0g"/>
+  <meta name="baidu-site-verification" content="YbUZRWA1WK" />
   <meta charset="utf-8">
   <title>Chin的博客</title>
   <meta name="author" content="Chin">
 
   
-  <meta name="description" content="java 程序 开发">
+  <meta name="description" content="Chin的博客">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,17 +20,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://januscj.github.io/">
+  <link rel="canonical" href="http://januscj.github.io">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Chin的博客" type="application/atom+xml">
   <script src="/javascripts/modernizr-2.0.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
   <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 
   
 
@@ -48,16 +50,16 @@
   
 </ul>
   
-<form action="https://www.google.com/search" method="get">
+<form action="http://google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="sitesearch" value="januscj.github.io">
+    <input type="hidden" name="q" value="site:januscj.github.io" />
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
   
 <ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">文章列表</a></li>
 </ul>
 
 </nav>
@@ -71,7 +73,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2015/08/13/aqs-tan-jiu/">AQS探究</a></h1>
+      <h1 class="entry-title"><a href="/2013/10/06/linkedhashmapyuan-ma-fen-xi/">LinkedHashMap源码分析</a></h1>
     
     
       <p class="meta">
@@ -80,18 +82,54 @@
 
 
 
-<time class='entry-date' datetime='2015-08-13'><span class='date'>2015-08-13</span> <span class='time'>12:00 am</span></time>
+
+
+
+
+  
+
+
+<time datetime="2013-10-06T18:00:00+08:00" pubdate data-updated="true">2013-10-06</time>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>总所周知，java concurrent包的工具类是构建在AbstractQueuedSynchronizer类上的基础上的，而这个类是Doug Lea大神基于CHL队列实现的同步器。这个强大的同步器是怎样实现的呢？我们来一探究竟。</p>
+  <div class="entry-content"><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;继之前看完hashMap的源码之后，最近又看以了一下LinkedHashMap的源码。发现LinkedHash的代码很简单，他是HashMap的子类，自然具有
+父类的所以特性，除此之外他也有自己的特点。详细来说，它包含两种数据结构：1、从父类HashMap继承来的数据链表结构(见HashMap源码分析这篇文章)。2、自己的双向循环链表结构。前一
+种数据结构的由来显而易见，后一种数据结构是怎么实现的呢？这久要从LinkedMap的对象创建说起：<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LinkedHashMap最简单的构造函数是这样的：</p>
 
-<p>因为AQS的代码比较难以理解，我们从concurrent包下的并发工具类着手开始研究。从最简单的CountDownLatch开始，首先看它的源码</p>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="nf">LinkedHashMap</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">accessOrder</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+
+<p>看出跟双向链表又任何关系，关键是下面这个方法：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">header</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Entry</span><span class="o">&lt;&gt;(-</span><span class="mi">1</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">header</span><span class="o">.</span><span class="na">before</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="na">after</span> <span class="o">=</span> <span class="n">header</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个方法是对HashMap中的init的覆盖，在HashMap的构造方法中调用。注意这里的Entry类是LinkedHashMap继承HashMap.Entry类的实现类：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -123,85 +161,81 @@
 <span class='line-number'>30</span>
 <span class='line-number'>31</span>
 <span class='line-number'>32</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="kd">public</span> <span class="kd">class</span> <span class="nc">CountDownLatch</span> <span class="o">{</span>
-</span><span class='line'>    <span class="cm">/**</span>
-</span><span class='line'><span class="cm">     * Synchronization control For CountDownLatch.</span>
-</span><span class='line'><span class="cm">     * Uses AQS state to represent count.</span>
-</span><span class='line'><span class="cm">     */</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">Sync</span> <span class="kd">extends</span> <span class="n">AbstractQueuedSynchronizer</span> <span class="o">{</span>
-</span><span class='line'>        <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">serialVersionUID</span> <span class="o">=</span> <span class="mi">4982264981922014374L</span><span class="o">;</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">HashMap</span><span class="o">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// These fields comprise the doubly linked list used for iteration.</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">before</span><span class="o">,</span> <span class="n">after</span><span class="o">;</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="n">Sync</span><span class="o">(</span><span class="kt">int</span> <span class="n">count</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">setState</span><span class="o">(</span><span class="n">count</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">(</span><span class="kt">int</span> <span class="n">hash</span><span class="o">,</span> <span class="n">K</span> <span class="n">key</span><span class="o">,</span> <span class="n">V</span> <span class="n">value</span><span class="o">,</span> <span class="n">HashMap</span><span class="o">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="kd">super</span><span class="o">(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="n">next</span><span class="o">);</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="kt">int</span> <span class="nf">getCount</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">return</span> <span class="nf">getState</span><span class="o">();</span>
+</span><span class='line'>        <span class="cm">/**</span>
+</span><span class='line'><span class="cm">         * Removes this entry from the linked list.</span>
+</span><span class='line'><span class="cm">         */</span>
+</span><span class='line'>        <span class="kd">private</span> <span class="kt">void</span> <span class="nf">remove</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">before</span><span class="o">.</span><span class="na">after</span> <span class="o">=</span> <span class="n">after</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">after</span><span class="o">.</span><span class="na">before</span> <span class="o">=</span> <span class="n">before</span><span class="o">;</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="kd">protected</span> <span class="kt">int</span> <span class="nf">tryAcquireShared</span><span class="o">(</span><span class="kt">int</span> <span class="n">acquires</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">return</span> <span class="o">(</span><span class="n">getState</span><span class="o">()</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span>
+</span><span class='line'>        <span class="cm">/**</span>
+</span><span class='line'><span class="cm">         * Inserts this entry before the specified existing entry in the list.</span>
+</span><span class='line'><span class="cm">         */</span>
+</span><span class='line'>        <span class="kd">private</span> <span class="kt">void</span> <span class="nf">addBefore</span><span class="o">(</span><span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">existingEntry</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">after</span>  <span class="o">=</span> <span class="n">existingEntry</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">before</span> <span class="o">=</span> <span class="n">existingEntry</span><span class="o">.</span><span class="na">before</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">before</span><span class="o">.</span><span class="na">after</span> <span class="o">=</span> <span class="k">this</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">after</span><span class="o">.</span><span class="na">before</span> <span class="o">=</span> <span class="k">this</span><span class="o">;</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="kd">protected</span> <span class="kt">boolean</span> <span class="nf">tryReleaseShared</span><span class="o">(</span><span class="kt">int</span> <span class="n">releases</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="c1">// Decrement count; signal when transition to zero</span>
-</span><span class='line'>            <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-</span><span class='line'>                <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">getState</span><span class="o">();</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>                    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>                <span class="kt">int</span> <span class="n">nextc</span> <span class="o">=</span> <span class="n">c</span><span class="o">-</span><span class="mi">1</span><span class="o">;</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetState</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">nextc</span><span class="o">))</span>
-</span><span class='line'>                    <span class="k">return</span> <span class="n">nextc</span> <span class="o">==</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>        <span class="cm">/**</span>
+</span><span class='line'><span class="cm">         * This method is invoked by the superclass whenever the value</span>
+</span><span class='line'><span class="cm">         * of a pre-existing entry is read by Map.get or modified by Map.set.</span>
+</span><span class='line'><span class="cm">         * If the enclosing Map is access-ordered, it moves the entry</span>
+</span><span class='line'><span class="cm">         * to the end of the list; otherwise, it does nothing.</span>
+</span><span class='line'><span class="cm">         */</span>
+</span><span class='line'>        <span class="kt">void</span> <span class="nf">recordAccess</span><span class="o">(</span><span class="n">HashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">m</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">lm</span> <span class="o">=</span> <span class="o">(</span><span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;)</span><span class="n">m</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">lm</span><span class="o">.</span><span class="na">accessOrder</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">lm</span><span class="o">.</span><span class="na">modCount</span><span class="o">++;</span>
+</span><span class='line'>                <span class="n">remove</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">addBefore</span><span class="o">(</span><span class="n">lm</span><span class="o">.</span><span class="na">header</span><span class="o">);</span>
 </span><span class='line'>            <span class="o">}</span>
 </span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>CountDownlatch类定义了一个Sync类继承自AQS，实现的了AQS的tryAcquireShared和tryReleaseShared方法，share顾名思义是共享锁。首先从await方法入手：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">await</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">sync</span><span class="o">.</span><span class="na">acquireSharedInterruptibly</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>await方法调用的AQS的acquireSharedInterruptibly</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">void</span> <span class="nf">acquireSharedInterruptibly</span><span class="o">(</span><span class="kt">int</span> <span class="n">arg</span><span class="o">)</span>
-</span><span class='line'>            <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">interrupted</span><span class="o">())</span>
-</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">InterruptedException</span><span class="o">();</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">tryAcquireShared</span><span class="o">(</span><span class="n">arg</span><span class="o">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>            <span class="n">doAcquireSharedInterruptibly</span><span class="o">(</span><span class="n">arg</span><span class="o">);</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>从这个方法看，await方法是可中断的，如果当前线程被中断，则直接向上抛InterruptedException。如果正常执行，则会调用tryAcquireShared方法，这个是在之类中实现的。现在回到CountDownLatch，看tryAcquireShared的实现：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="kd">protected</span> <span class="kt">int</span> <span class="nf">tryAcquireShared</span><span class="o">(</span><span class="kt">int</span> <span class="n">acquires</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">return</span> <span class="o">(</span><span class="n">getState</span><span class="o">()</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kt">void</span> <span class="nf">recordRemoval</span><span class="o">(</span><span class="n">HashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">m</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">remove</span><span class="o">();</span>
 </span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>很简单，如果state为0则返回1，否则，返回-1。state是构造函数里传进来的。我们都知道使用CountDownlatch时传进来的数字表示并发执行的线程数，由此联想state就是持有锁的线程数。从acquireSharedInterruptibly方法可以看到，当前state!=0，即并发任务线程还没执行完时，会进入doAcquireSharedInterruptibly:</p>
+<p>成员变量多了before和after，还增加了一个addBefore方法。双向链表的初始化就是init方法中这行代码：</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="n">header</span><span class="o">.</span><span class="na">before</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="na">after</span> <span class="o">=</span> <span class="n">header</span><span class="o">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>即这个双向链表初始化完之后，只有一个header节点，header节点的key、value都为null。初始化完之后的结构是这样的：<br/>
+<img src="/images/linkedhashmap1.jpg"><br/>
+再向LinkedHashMap添加一个元素之后的结构是这样的：<br/><br/>
+<img src="/images/linkedhashmap2.jpg"><br/>
+依次类推，最近添加的节点在最前面，紧跟在header节点之后。LinkedHashMap双向链表元素的添加主要是下面这段代码：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -218,227 +252,30 @@
 <span class='line-number'>15</span>
 <span class='line-number'>16</span>
 <span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">doAcquireSharedInterruptibly</span><span class="o">(</span><span class="kt">int</span> <span class="n">arg</span><span class="o">)</span>
-</span><span class='line'>        <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-</span><span class='line'>        <span class="kd">final</span> <span class="n">Node</span> <span class="n">node</span> <span class="o">=</span> <span class="n">addWaiter</span><span class="o">(</span><span class="n">Node</span><span class="o">.</span><span class="na">SHARED</span><span class="o">);</span>
-</span><span class='line'>        <span class="kt">boolean</span> <span class="n">failed</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-</span><span class='line'>                <span class="kd">final</span> <span class="n">Node</span> <span class="n">p</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="na">predecessor</span><span class="o">();</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">p</span> <span class="o">==</span> <span class="n">head</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>                    <span class="kt">int</span> <span class="n">r</span> <span class="o">=</span> <span class="n">tryAcquireShared</span><span class="o">(</span><span class="n">arg</span><span class="o">);</span>
-</span><span class='line'>                    <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>                        <span class="n">setHeadAndPropagate</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">r</span><span class="o">);</span>
-</span><span class='line'>                        <span class="n">p</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">// help GC</span>
-</span><span class='line'>                        <span class="n">failed</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>                        <span class="k">return</span><span class="o">;</span>
-</span><span class='line'>                    <span class="o">}</span>
-</span><span class='line'>                <span class="o">}</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">shouldParkAfterFailedAcquire</span><span class="o">(</span><span class="n">p</span><span class="o">,</span> <span class="n">node</span><span class="o">)</span> <span class="o">&amp;&amp;</span>
-</span><span class='line'>                    <span class="n">parkAndCheckInterrupt</span><span class="o">())</span>
-</span><span class='line'>                    <span class="k">throw</span> <span class="k">new</span> <span class="nf">InterruptedException</span><span class="o">();</span>
-</span><span class='line'>            <span class="o">}</span>
-</span><span class='line'>        <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">failed</span><span class="o">)</span>
-</span><span class='line'>                <span class="n">cancelAcquire</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kt">void</span> <span class="nf">addEntry</span><span class="o">(</span><span class="kt">int</span> <span class="n">hash</span><span class="o">,</span> <span class="n">K</span> <span class="n">key</span><span class="o">,</span> <span class="n">V</span> <span class="n">value</span><span class="o">,</span> <span class="kt">int</span> <span class="n">bucketIndex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">.</span><span class="na">addEntry</span><span class="o">(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="n">bucketIndex</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Remove eldest entry if instructed</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">eldest</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="na">after</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">removeEldestEntry</span><span class="o">(</span><span class="n">eldest</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">removeEntryForKey</span><span class="o">(</span><span class="n">eldest</span><span class="o">.</span><span class="na">key</span><span class="o">);</span>
 </span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kt">void</span> <span class="nf">createEntry</span><span class="o">(</span><span class="kt">int</span> <span class="n">hash</span><span class="o">,</span> <span class="n">K</span> <span class="n">key</span><span class="o">,</span> <span class="n">V</span> <span class="n">value</span><span class="o">,</span> <span class="kt">int</span> <span class="n">bucketIndex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">HashMap</span><span class="o">.</span><span class="na">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">old</span> <span class="o">=</span> <span class="n">table</span><span class="o">[</span><span class="n">bucketIndex</span><span class="o">];</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Entry</span><span class="o">&lt;&gt;(</span><span class="n">hash</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="n">old</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">table</span><span class="o">[</span><span class="n">bucketIndex</span><span class="o">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">e</span><span class="o">.</span><span class="na">addBefore</span><span class="o">(</span><span class="n">header</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">size</span><span class="o">++;</span>
 </span><span class='line'>    <span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>首先看addWaiter方法</p>
+<p>LinkedHashMap的这两个方法也是对HashMap的方法的覆盖，是由HashMap的put方法引起的调用。<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LinkedHashMap的构造说完了，那它又是怎么迭代遍历元素的呢？同样LinkedHashMap实现了自己的迭代器：</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">private</span> <span class="n">Node</span> <span class="nf">addWaiter</span><span class="o">(</span><span class="n">Node</span> <span class="n">mode</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">Node</span> <span class="n">node</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Node</span><span class="o">(</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">(),</span> <span class="n">mode</span><span class="o">);</span>
-</span><span class='line'>        <span class="c1">// Try the fast path of enq; backup to full enq on failure</span>
-</span><span class='line'>        <span class="n">Node</span> <span class="n">pred</span> <span class="o">=</span> <span class="n">tail</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">pred</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">node</span><span class="o">.</span><span class="na">prev</span> <span class="o">=</span> <span class="n">pred</span><span class="o">;</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetTail</span><span class="o">(</span><span class="n">pred</span><span class="o">,</span> <span class="n">node</span><span class="o">))</span> <span class="o">{</span>
-</span><span class='line'>                <span class="n">pred</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">;</span>
-</span><span class='line'>                <span class="k">return</span> <span class="n">node</span><span class="o">;</span>
-</span><span class='line'>            <span class="o">}</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="n">enq</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-</span><span class='line'>        <span class="k">return</span> <span class="n">node</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>
-也就是说在pred为null的时候会初始化队列</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="n">Node</span> <span class="nf">enq</span><span class="o">(</span><span class="kd">final</span> <span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">Node</span> <span class="n">t</span> <span class="o">=</span> <span class="n">tail</span><span class="o">;</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">t</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// Must initialize</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetHead</span><span class="o">(</span><span class="k">new</span> <span class="nf">Node</span><span class="o">()))</span>
-</span><span class='line'>                    <span class="n">tail</span> <span class="o">=</span> <span class="n">head</span><span class="o">;</span>
-</span><span class='line'>            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-</span><span class='line'>                <span class="n">node</span><span class="o">.</span><span class="na">prev</span> <span class="o">=</span> <span class="n">t</span><span class="o">;</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetTail</span><span class="o">(</span><span class="n">t</span><span class="o">,</span> <span class="n">node</span><span class="o">))</span> <span class="o">{</span>
-</span><span class='line'>                    <span class="n">t</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">;</span>
-</span><span class='line'>                    <span class="k">return</span> <span class="n">t</span><span class="o">;</span>
-</span><span class='line'>                <span class="o">}</span>
-</span><span class='line'>            <span class="o">}</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>从上面代码看初始化之后的队列是这样的：</p>
-
-<p><img src="/images/queue.jpg" title="线程队列初始化" ></p>
-
-<p>head只是指向一个空节点，这一点对于理解后面的代码很重要，再回到doAcquireSharedInterruptibly,p的前继节点就是head,所以会进入下面的if分支（至于为什么有这个if判断后面再详解），对于CountDownLatch，在并发任务还没完成的时候，tryAcquireShared返回值为-1，所以就不会往下走。直接进入shouldParkAfterFailedAcquire</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">shouldParkAfterFailedAcquire</span><span class="o">(</span><span class="n">Node</span> <span class="n">pred</span><span class="o">,</span> <span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="kt">int</span> <span class="n">ws</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="na">waitStatus</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">ws</span> <span class="o">==</span> <span class="n">Node</span><span class="o">.</span><span class="na">SIGNAL</span><span class="o">)</span>
-</span><span class='line'>            <span class="cm">/*</span>
-</span><span class='line'><span class="cm">             * This node has already set status asking a release</span>
-</span><span class='line'><span class="cm">             * to signal it, so it can safely park.</span>
-</span><span class='line'><span class="cm">             */</span>
-</span><span class='line'>            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">ws</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="cm">/*</span>
-</span><span class='line'><span class="cm">             * Predecessor was cancelled. Skip over predecessors and</span>
-</span><span class='line'><span class="cm">             * indicate retry.</span>
-</span><span class='line'><span class="cm">             */</span>
-</span><span class='line'>            <span class="k">do</span> <span class="o">{</span>
-</span><span class='line'>                <span class="n">node</span><span class="o">.</span><span class="na">prev</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="na">prev</span><span class="o">;</span>
-</span><span class='line'>            <span class="o">}</span> <span class="k">while</span> <span class="o">(</span><span class="n">pred</span><span class="o">.</span><span class="na">waitStatus</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">);</span>
-</span><span class='line'>            <span class="n">pred</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">node</span><span class="o">;</span>
-</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-</span><span class='line'>            <span class="cm">/*</span>
-</span><span class='line'><span class="cm">             * waitStatus must be 0 or PROPAGATE.  Indicate that we</span>
-</span><span class='line'><span class="cm">             * need a signal, but don&#39;t park yet.  Caller will need to</span>
-</span><span class='line'><span class="cm">             * retry to make sure it cannot acquire before parking.</span>
-</span><span class='line'><span class="cm">             */</span>
-</span><span class='line'>            <span class="n">compareAndSetWaitStatus</span><span class="o">(</span><span class="n">pred</span><span class="o">,</span> <span class="n">ws</span><span class="o">,</span> <span class="n">Node</span><span class="o">.</span><span class="na">SIGNAL</span><span class="o">);</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>pred就是head，初始化之后waitStatus=0，进入else分支，故head的waitStatus被更新为SIGNAL，再回到doAcquireSharedInterruptibly,这个时候如果线程没有被中断，那么会接着循环，再次进入shouldParkAfterFailedAcquire，这个是进入第一个if分支，返回true，那么就是进入parkAndCheckInterrupt，将当前线程阻塞住,这就是CountDownlatch调用await后阻塞住的原因。</p>
-
-<blockquote><p>从上面的分析可以知道，对于CountDownlatch，在并发任务还没结束的时候，如果另外一个<strong>线程B</strong>再调用await方法，那么当前线程会放到等待队列的最后面。第一个节点park住的时候，它的waitStatus还是0，所以这次，shouldParkAfterFailedAcquire会把第一个节点的waitStatus设置为SIGNAL，同时下次循环会park住<strong>线程B</strong></p></blockquote>
-
-<p><strong>AQS获取锁</strong>的过程已经了解清楚了，下面来看看<strong>AQS释放的过程</strong>。还是从CountDownLatch的countdown()方法入手。countdown()是直接调用AQS的releaseShared</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="kd">final</span> <span class="kt">boolean</span> <span class="nf">releaseShared</span><span class="o">(</span><span class="kt">int</span> <span class="n">arg</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">tryReleaseShared</span><span class="o">(</span><span class="n">arg</span><span class="o">))</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">doReleaseShared</span><span class="o">();</span>
-</span><span class='line'>            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>从代码看，tryReleaseShared是在子类中实现的:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>        <span class="kd">protected</span> <span class="kt">boolean</span> <span class="nf">tryReleaseShared</span><span class="o">(</span><span class="kt">int</span> <span class="n">releases</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="c1">// Decrement count; signal when transition to zero</span>
-</span><span class='line'>            <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-</span><span class='line'>                <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">getState</span><span class="o">();</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>                    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>                <span class="kt">int</span> <span class="n">nextc</span> <span class="o">=</span> <span class="n">c</span><span class="o">-</span><span class="mi">1</span><span class="o">;</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetState</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">nextc</span><span class="o">))</span>
-</span><span class='line'>                    <span class="k">return</span> <span class="n">nextc</span> <span class="o">==</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>            <span class="o">}</span>
-</span><span class='line'>        <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>从tryReleaseShared方法代码来看，只有等所有并发任务执行完，tryReleaseShared才会返回true，才会执行doReleaseShared</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -467,41 +304,166 @@
 <span class='line-number'>27</span>
 <span class='line-number'>28</span>
 <span class='line-number'>29</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">doReleaseShared</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="cm">/*</span>
-</span><span class='line'><span class="cm">         * Ensure that a release propagates, even if there are other</span>
-</span><span class='line'><span class="cm">         * in-progress acquires/releases.  This proceeds in the usual</span>
-</span><span class='line'><span class="cm">         * way of trying to unparkSuccessor of head if it needs</span>
-</span><span class='line'><span class="cm">         * signal. But if it does not, status is set to PROPAGATE to</span>
-</span><span class='line'><span class="cm">         * ensure that upon release, propagation continues.</span>
-</span><span class='line'><span class="cm">         * Additionally, we must loop in case a new node is added</span>
-</span><span class='line'><span class="cm">         * while we are doing this. Also, unlike other uses of</span>
-</span><span class='line'><span class="cm">         * unparkSuccessor, we need to know if CAS to reset status</span>
-</span><span class='line'><span class="cm">         * fails, if so rechecking.</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">abstract</span> <span class="kd">class</span> <span class="nc">LinkedHashIterator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">implements</span> <span class="n">Iterator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">nextEntry</span>    <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="na">after</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">lastReturned</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="cm">/**</span>
+</span><span class='line'><span class="cm">         * The modCount value that the iterator believes that the backing</span>
+</span><span class='line'><span class="cm">         * List should have.  If this expectation is violated, the iterator</span>
+</span><span class='line'><span class="cm">         * has detected concurrent modification.</span>
 </span><span class='line'><span class="cm">         */</span>
-</span><span class='line'>        <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">Node</span> <span class="n">h</span> <span class="o">=</span> <span class="n">head</span><span class="o">;</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">h</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">h</span> <span class="o">!=</span> <span class="n">tail</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>                <span class="kt">int</span> <span class="n">ws</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="na">waitStatus</span><span class="o">;</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">ws</span> <span class="o">==</span> <span class="n">Node</span><span class="o">.</span><span class="na">SIGNAL</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>                    <span class="k">if</span> <span class="o">(!</span><span class="n">compareAndSetWaitStatus</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="n">Node</span><span class="o">.</span><span class="na">SIGNAL</span><span class="o">,</span> <span class="mi">0</span><span class="o">))</span>
-</span><span class='line'>                        <span class="k">continue</span><span class="o">;</span>            <span class="c1">// loop to recheck cases</span>
-</span><span class='line'>                    <span class="n">unparkSuccessor</span><span class="o">(</span><span class="n">h</span><span class="o">);</span>
-</span><span class='line'>                <span class="o">}</span>
-</span><span class='line'>                <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">ws</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span>
-</span><span class='line'>                         <span class="o">!</span><span class="n">compareAndSetWaitStatus</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">Node</span><span class="o">.</span><span class="na">PROPAGATE</span><span class="o">))</span>
-</span><span class='line'>                    <span class="k">continue</span><span class="o">;</span>                <span class="c1">// loop on failed CAS</span>
-</span><span class='line'>            <span class="o">}</span>
-</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">h</span> <span class="o">==</span> <span class="n">head</span><span class="o">)</span>                   <span class="c1">// loop if head changed</span>
-</span><span class='line'>                <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">expectedModCount</span> <span class="o">=</span> <span class="n">modCount</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">hasNext</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">nextEntry</span> <span class="o">!=</span> <span class="n">header</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">remove</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">lastReturned</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">modCount</span> <span class="o">!=</span> <span class="n">expectedModCount</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">ConcurrentModificationException</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">LinkedHashMap</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">lastReturned</span><span class="o">.</span><span class="na">key</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">lastReturned</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">expectedModCount</span> <span class="o">=</span> <span class="n">modCount</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">nextEntry</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">modCount</span> <span class="o">!=</span> <span class="n">expectedModCount</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">ConcurrentModificationException</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">nextEntry</span> <span class="o">==</span> <span class="n">header</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">NoSuchElementException</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="n">lastReturned</span> <span class="o">=</span> <span class="n">nextEntry</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">nextEntry</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">after</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">e</span><span class="o">;</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>如果head节点的waitStatus为SIGNAL，则先把head节点的status设置为0，然后进入unparkSuccessor</p>
+<p>同样关键是nextEntry方法，故知LinkedHashMap是按照元素的放入顺序来迭代的，如果按before来迭代就是逆向迭代了。<br/>
+LinkedHashMap作为一种特殊的HashMap，它也有随机访问的特性。看它的get方法代码：</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="n">V</span> <span class="nf">get</span><span class="o">(</span><span class="n">Object</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="o">(</span><span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;)</span><span class="n">getEntry</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">e</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>            <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">e</span><span class="o">.</span><span class="na">recordAccess</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>跟HashMap的大同小异，访问方式同HashMap(见HashMap源码分析)。这个recordAccess方法值得注意，源码：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kt">void</span> <span class="nf">recordAccess</span><span class="o">(</span><span class="n">HashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">m</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">lm</span> <span class="o">=</span> <span class="o">(</span><span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;)</span><span class="n">m</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">lm</span><span class="o">.</span><span class="na">accessOrder</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">lm</span><span class="o">.</span><span class="na">modCount</span><span class="o">++;</span>
+</span><span class='line'>                <span class="n">remove</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">addBefore</span><span class="o">(</span><span class="n">lm</span><span class="o">.</span><span class="na">header</span><span class="o">);</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从代码来看，若构造LinkedHashMap的时候accessOrder=true，那么在每次调用get访问的元素都会放到链表的最前端，即把最后后一次get访问的元素放在最前面，这种情况下LinkedHashMap就不是按元素的放入顺序来存放的，而是最近访问的在最前面。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/2013/09/29/hashmapyuan-ma-fen-xi/">HashMap源码分析</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-29T22:53:00+08:00" pubdate data-updated="true">2013-09-29</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通读hashMap的源代码之后，发现他的数据结构是这样的。<br/>
+<img src="/images/hashmap1.jpg"><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;阅读完源码知道，hashmap是会把indexFor()方法获得的index相同的那些entity放在数组的同一个位置，用一个next引用指向下一个entity，即index相同的entity组成了一个链表。这样来说，如果index的重复越多，链表越长，随机操作的效率就越低。那么jdk是如何计算index的呢？jdk中indexFor()方法的源码是:</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">static</span> <span class="kt">int</span> <span class="nf">indexFor</span><span class="o">(</span><span class="kt">int</span> <span class="n">h</span><span class="o">,</span> <span class="kt">int</span> <span class="n">length</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">h</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>其中leng是hashmap的大小，而h是key的hashCode经过hash()方法处理的结构，hash()方法源码：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">static</span> <span class="kt">int</span> <span class="nf">hash</span><span class="o">(</span><span class="kt">int</span> <span class="n">h</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// This function ensures that hashCodes that differ only by</span>
+</span><span class='line'>        <span class="c1">// constant multiples at each bit position have a bounded</span>
+</span><span class='line'>        <span class="c1">// number of collisions (approximately 8 at default load factor).</span>
+</span><span class='line'>        <span class="n">h</span> <span class="o">^=</span> <span class="o">(</span><span class="n">h</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">20</span><span class="o">)</span> <span class="o">^</span> <span class="o">(</span><span class="n">h</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">12</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">h</span> <span class="o">^</span> <span class="o">(</span><span class="n">h</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">7</span><span class="o">)</span> <span class="o">^</span> <span class="o">(</span><span class="n">h</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">4</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;都说遍历hashmap的时候不一定是按照元素放入的顺序来迭代的，这是怎么回事呢？来看hashmap迭代的关键代码:</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -527,38 +489,397 @@
 <span class='line-number'>24</span>
 <span class='line-number'>25</span>
 <span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">unparkSuccessor</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="cm">/*</span>
-</span><span class='line'><span class="cm">         * If status is negative (i.e., possibly needing signal) try</span>
-</span><span class='line'><span class="cm">         * to clear in anticipation of signalling.  It is OK if this</span>
-</span><span class='line'><span class="cm">         * fails or if status is changed by waiting thread.</span>
-</span><span class='line'><span class="cm">         */</span>
-</span><span class='line'>        <span class="kt">int</span> <span class="n">ws</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="na">waitStatus</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">ws</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>            <span class="n">compareAndSetWaitStatus</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">ws</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">abstract</span> <span class="kd">class</span> <span class="nc">HashIterator</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="kd">implements</span> <span class="n">Iterator</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>        <span class="c1">// next entry to return</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">expectedModCount</span><span class="o">;</span>   <span class="c1">// For fast-fail</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">index</span><span class="o">;</span>              <span class="c1">// current slot</span>
+</span><span class='line'>        <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">current</span><span class="o">;</span>     <span class="c1">// current entry</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="cm">/*</span>
-</span><span class='line'><span class="cm">         * Thread to unpark is held in successor, which is normally</span>
-</span><span class='line'><span class="cm">         * just the next node.  But if cancelled or apparently null,</span>
-</span><span class='line'><span class="cm">         * traverse backwards from tail to find the actual</span>
-</span><span class='line'><span class="cm">         * non-cancelled successor.</span>
-</span><span class='line'><span class="cm">         */</span>
-</span><span class='line'>        <span class="n">Node</span> <span class="n">s</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">s</span><span class="o">.</span><span class="na">waitStatus</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>            <span class="n">s</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>            <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">t</span> <span class="o">=</span> <span class="n">tail</span><span class="o">;</span> <span class="n">t</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">node</span><span class="o">;</span> <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="na">prev</span><span class="o">)</span>
-</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">t</span><span class="o">.</span><span class="na">waitStatus</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>                    <span class="n">s</span> <span class="o">=</span> <span class="n">t</span><span class="o">;</span>
+</span><span class='line'>        <span class="n">HashIterator</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">expectedModCount</span> <span class="o">=</span> <span class="n">modCount</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// advance to first entry</span>
+</span><span class='line'>                <span class="n">Entry</span><span class="o">[]</span> <span class="n">t</span> <span class="o">=</span> <span class="n">table</span><span class="o">;</span>
+</span><span class='line'>                <span class="k">while</span> <span class="o">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">t</span><span class="o">.</span><span class="na">length</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">next</span> <span class="o">=</span> <span class="n">t</span><span class="o">[</span><span class="n">index</span><span class="o">++])</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">;</span>
+</span><span class='line'>            <span class="o">}</span>
 </span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-</span><span class='line'>            <span class="n">LockSupport</span><span class="o">.</span><span class="na">unpark</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">thread</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="kd">final</span> <span class="kt">boolean</span> <span class="nf">hasNext</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">next</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">final</span> <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">nextEntry</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">modCount</span> <span class="o">!=</span> <span class="n">expectedModCount</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">ConcurrentModificationException</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">Entry</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">e</span> <span class="o">=</span> <span class="n">next</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">e</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">NoSuchElementException</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">if</span> <span class="o">((</span><span class="n">next</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="na">next</span><span class="o">)</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">Entry</span><span class="o">[]</span> <span class="n">t</span> <span class="o">=</span> <span class="n">table</span><span class="o">;</span>
+</span><span class='line'>                <span class="k">while</span> <span class="o">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">t</span><span class="o">.</span><span class="na">length</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">next</span> <span class="o">=</span> <span class="n">t</span><span class="o">[</span><span class="n">index</span><span class="o">++])</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">;</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>            <span class="n">current</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">return</span> <span class="n">e</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">remove</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">current</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(</span><span class="n">modCount</span> <span class="o">!=</span> <span class="n">expectedModCount</span><span class="o">)</span>
+</span><span class='line'>                <span class="k">throw</span> <span class="k">new</span> <span class="nf">ConcurrentModificationException</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">Object</span> <span class="n">k</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="na">key</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">current</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">HashMap</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">removeEntryForKey</span><span class="o">(</span><span class="n">k</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">expectedModCount</span> <span class="o">=</span> <span class="n">modCount</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>在通常情况下，s!=null并且s.waitStatus为SIGNAL，所以head节点的后继节点会被唤醒。就是说每次调用releaseShared只会唤醒等待队列中head节点之后的线程。</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通关HashIterator的构造方法和nextEntry方法知:<b>entrySet是按深度优先遍历的</b>，即构造完之后next会指向第一个不为null的元素，迭代的时候nextEntry返回当前元素，在结束的时候
+next指向下一个不为空的元素，没有元素，则next为null，依次往下遍历直到next为null。 <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;此外key和value的迭代hashmap都是以此类作为父类，写了自己的实现类。key的迭代类KeyIterator:</p>
 
-<blockquote><p>分析到这里，试想这个使用CountDownLatch场景，线程A和线程B，都调用await方法等待线程B、线程C完成任务。那么线程A和线程B只有一个会被唤醒，另一个始终处于阻塞状态。</p></blockquote>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">KeyIterator</span> <span class="kd">extends</span> <span class="n">HashIterator</span><span class="o">&lt;</span><span class="n">K</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">public</span> <span class="n">K</span> <span class="nf">next</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="nf">nextEntry</span><span class="o">().</span><span class="na">getKey</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>value的迭代类ValueIterator：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">ValueIterator</span> <span class="kd">extends</span> <span class="n">HashIterator</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">public</span> <span class="n">V</span> <span class="nf">next</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="nf">nextEntry</span><span class="o">().</span><span class="na">value</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;由此看，jdk的代码的面向对象设计是相当出色的，以后项目的架构设计可以很好的参考jdk。到此，之前的大部分疑问都解决了。还有几个疑问的是，
+其中一个就是，我们都知道hashmap在迭代的时候是不能修改的，那我们来看一下代码这是怎么回事呢？<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;在hashmap的几个修改方法中都会判断modCount != expectedModCount，如果这两个值不等就会抛出ConcurrentModificationException。
+HashIterator构造的时候expectedModCount = modCount;迭代的时候不会修改expctedModCount和modCount,但put、remove都会修改modCount，故在迭代的时候会导致抛出
+ConcurrentModificationException。看过官方的文档注释，貌似是为了防止hashmap在多线程下被修改，但问题是这样hashmap在单线程下也不能修改了，我认为这是一个不好的设计。
+我想多线程环境没有人会想到用hashmap不做任何同步处理，那样出问题的风险太大了。所以hashmap本身应该只是针对单线程环境的，那就没必要有这样的设计。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/2013/09/24/yong-redisshi-xian-fen-bu-shi-suo/">用redis实现分布式锁</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-24T19:17:00+08:00" pubdate data-updated="true">2013-09-24</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content">
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">lock</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span class='line'><span class="k">while</span> <span class="n">lock</span> <span class="o">!=</span> <span class="mi">1</span><span class="o">:</span>
+</span><span class='line'>    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">current</span> <span class="n">Unix</span> <span class="n">time</span> <span class="o">+</span> <span class="n">lock</span> <span class="n">timeout</span> <span class="o">+</span> <span class="mi">1</span>
+</span><span class='line'>    <span class="n">lock</span> <span class="o">=</span> <span class="n">SETNX</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span> <span class="n">timestamp</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">lock</span> <span class="o">==</span> <span class="mi">1</span> <span class="n">or</span> <span class="o">(</span><span class="n">now</span><span class="o">()</span> <span class="o">&gt;</span> <span class="o">(</span><span class="n">GET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span><span class="o">)</span> <span class="n">and</span> <span class="n">now</span><span class="o">()</span> <span class="o">&gt;</span> <span class="o">(</span><span class="n">GETSET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span> <span class="n">timestamp</span><span class="o">)):</span>
+</span><span class='line'>        <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>    <span class="k">else</span><span class="o">:</span>
+</span><span class='line'>        <span class="n">sleep</span><span class="o">(</span><span class="mi">10</span><span class="n">ms</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">do_job</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="nf">now</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">GET</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span><span class="o">:</span>
+</span><span class='line'>    <span class="n">DEL</span> <span class="n">lock</span><span class="o">.</span><span class="na">foo</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/2013/09/23/bootstrapchang-yong-zu-jian/">Bootstrap常用组件</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-23T23:17:00+08:00" pubdate data-updated="true">2013-09-23</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><ul>
+<li>suggest控件 <a href="http://nicolasbize.github.io/magicsuggest/" target="_blank">magicsuggest</a></li>
+<li>即时编辑控件 <a href="http://vitalets.github.io/x-editable/" target="_blank">xeditable</a></li>
+<li>日期时间控件 <a href="http://tarruda.github.io/bootstrap-datetimepicker/" target="_blank">datetimepicker</a></li>
+<li>可编辑表格控件 <a href="https://github.com/warpech/jquery-handsontable/" target="_blank">handsontable</a></li>
+<li>分页控件</li>
+</ul>
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'>   <span class="cp">&lt;!DOCTYPE html&gt;</span>
+</span><span class='line'><span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'> <span class="nt">&lt;head&gt;</span>
+</span><span class='line'>     <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">&quot;utf-8&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'> <span class="nt">&lt;link</span> <span class="na">id=</span><span class="s">&quot;bootstrap_221&quot;</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">type=</span><span class="s">&quot;text/css&quot;</span> <span class="na">class=</span><span class="s">&quot;library&quot;</span> <span class="na">href=</span><span class="s">&quot;/js/sandbox/bootstrap-2.2.1/css/bootstrap.min.css&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'> <span class="nt">&lt;/head&gt;</span>
+</span><span class='line'> <span class="nt">&lt;style&gt;</span>
+</span><span class='line'>  <span class="nc">.pagination</span> <span class="nt">ul</span> <span class="o">&gt;</span> <span class="nt">li</span> <span class="o">&gt;</span> <span class="nt">input</span><span class="p">{</span>
+</span><span class='line'>         <span class="k">vertical-align</span><span class="o">:</span> <span class="k">top</span><span class="p">;</span>
+</span><span class='line'>         <span class="o">-</span><span class="n">webkit</span><span class="o">-</span><span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>          <span class="o">-</span><span class="n">moz</span><span class="o">-</span><span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>               <span class="k">border</span><span class="o">-</span><span class="n">radius</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">height</span><span class="o">:</span><span class="k">auto</span><span class="p">;</span>
+</span><span class='line'>         <span class="o">*</span><span class="k">height</span><span class="o">:</span> <span class="m">20px</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">margin-bottom</span><span class="o">:</span><span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">background-color</span><span class="o">:</span> <span class="m">#fff</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">border-left-width</span><span class="o">:</span> <span class="m">0</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">width</span><span class="o">:</span><span class="m">40px</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">float</span><span class="o">:</span><span class="k">left</span><span class="p">;</span>
+</span><span class='line'>         <span class="k">min-height</span><span class="o">:</span> <span class="k">auto</span><span class="p">;</span>
+</span><span class='line'>         <span class="o">*</span><span class="k">min-height</span><span class="o">:</span> <span class="m">20px</span><span class="p">;</span>
+</span><span class='line'>     <span class="p">}</span>
+</span><span class='line'> <span class="nt">&lt;/style&gt;</span>
+</span><span class='line'> <span class="nt">&lt;body&gt;</span>
+</span><span class='line'>     <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">&quot;pagination pagination-right&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>         <span class="nt">&lt;ul&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;&lt;i</span> <span class="na">class=</span><span class="s">&quot;icon-fast-backward&quot;</span><span class="nt">&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>Previous<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>1<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>2<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>3<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>4<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">&quot;disabled&quot;</span><span class="nt">&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>5<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;</span>Next<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;#&quot;</span><span class="nt">&gt;&lt;i</span> <span class="na">class=</span><span class="s">&quot;icon-fast-forward&quot;</span><span class="nt">&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">class=</span><span class="s">&quot;input&quot;</span><span class="nt">&gt;&lt;/li&gt;</span>
+</span><span class='line'>             <span class="nt">&lt;li&gt;&lt;a</span> <span class="na">href=</span><span class="s">&quot;javascript:void();&quot;</span> <span class="na">onclick=</span><span class="s">&quot;&quot;</span><span class="nt">&gt;</span>Go<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+</span><span class='line'>         <span class="nt">&lt;/ul&gt;</span>
+</span><span class='line'>     <span class="nt">&lt;/div&gt;</span>
+</span><span class='line'> <span class="nt">&lt;/body&gt;</span>
+</span><span class='line'><span class="nt">&lt;/html&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/2013/09/23/tornado-plus-sqlalchemyde-shi-wu-guan-li/">Tornado+sqlalchemy的事务管理</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-23T22:46:00+08:00" pubdate data-updated="true">2013-09-23</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;之前在项目开发当中遇到tornado+sqlalchemy的事务问题，一直没有时间没去解决。现在空下来了，考虑怎么解决这个问题。</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;众所周知，diango里有自己的middleware来做事务的管理，tornado是不是也能做自己的middelware呢来完成这件事情呢？经过研究，自己来实现tornado的middleware还是比较复杂的。不过网上有牛人写了一个，<a href="https://github.com/iamsk/tmiddleware" target="_blank">tmiddelware</a>。除此以外，使用装饰器是实现也是事务管理一种比较简便的方式。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'>     <span class="k">def</span> <span class="nf">transactional</span><span class="p">(</span><span class="n">baseSession</span><span class="p">):</span>
+</span><span class='line'>         <span class="k">def</span> <span class="nf">transaction</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span class='line'>             <span class="k">def</span> <span class="nf">__decorator</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span class='line'>                 <span class="n">session</span> <span class="o">=</span> <span class="n">baseSession</span><span class="p">()</span>
+</span><span class='line'>                 <span class="k">try</span><span class="p">:</span>
+</span><span class='line'>                     <span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span><span class="n">session</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span class='line'>                     <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span class='line'>                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span><span class="n">e</span><span class="p">:</span>
+</span><span class='line'>                     <span class="n">session</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+</span><span class='line'>                 <span class="k">finally</span><span class="p">:</span>
+</span><span class='line'>                     <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span class='line'>             <span class="k">return</span> <span class="n">__decorator</span>
+</span><span class='line'>
+</span><span class='line'>         <span class="k">return</span> <span class="n">transaction</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="nd">@transactional</span><span class="p">(</span><span class="n">BaseSession</span><span class="p">)</span>
+</span><span class='line'>     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">session</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span class='line'>         <span class="n">city</span> <span class="o">=</span> <span class="n">BaseCity</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;添加城市&quot;</span><span class="p">)</span>
+</span><span class='line'>         <span class="n">org</span> <span class="o">=</span> <span class="n">BaseOrg</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;添加组织&quot;</span><span class="p">)</span>
+</span><span class='line'>         <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">city</span><span class="p">)</span>
+</span><span class='line'>         <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">org</span><span class="p">)</span>
+</span><span class='line'>         <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;添加成功&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
 </div>
   
   
@@ -568,22 +889,74 @@
   
   <div class="pagination">
     
-    <a href="/blog/archives">Blog Archives</a>
+    <a href="/blog/archives">文章列表</a>
     
   </div>
 </div>
 <aside class="sidebar">
   
     <section>
-  <h1>Recent Posts</h1>
+  <h1>文章分类</h1>
+  <ul id="categories">
+    <li class='category'><a href='/categories/python/'>Python (1)</a></li>
+<li class='category'><a href='/categories/jdkyuan-ma-yue-du/'>jdk源码阅读 (2)</a></li>
+<li class='category'><a href='/categories/web-develop/'>web develop (1)</a></li>
+<li class='category'><a href='/categories/jia-gou/'>架构 (1)</a></li>
+
+  </ul>
+</section>
+<section>
+  <h1>近期文章</h1>
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2015/08/13/aqs-tan-jiu/">AQS探究</a>
+        <a href="/2013/10/06/linkedhashmapyuan-ma-fen-xi/">LinkedHashMap源码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/09/29/hashmapyuan-ma-fen-xi/">HashMap源码分析</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/09/24/yong-redisshi-xian-fen-bu-shi-suo/">用redis实现分布式锁</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/09/23/bootstrapchang-yong-zu-jian/">Bootstrap常用组件</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/09/23/tornado-plus-sqlalchemyde-shi-wu-guan-li/">Tornado+sqlalchemy的事务管理</a>
       </li>
     
   </ul>
 </section>
+
+<section>
+  <h1>近期回复</h1>
+  <script type="text/javascript">
+    function recent_comments(obj){
+      if(obj.response.length){
+        resault = '<ul>';
+        obj.response.forEach(function(response){
+          resault += '<li>';
+          resault += '<a href="'+response.author.profileUrl+'"><img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;"></a>';
+          resault += '<a href="'+response.author.profileUrl+'">'+response.author.name+'</a>：';
+          resault += '<span>'+response.message+'</span><br>'
+          resault += '<a href="'+response.thread.link+'">'+response.thread.title+'</a><br>'
+          resault += 'at <a href="'+response.url+'">'+response.createdAt+'</a>'
+          resault += '</li>';
+        });
+        resault += '</ul>';
+        document.write(resault);
+      }else{
+        document.write("目前沒有回复");
+      }
+    };
+  </script>
+  <script type="text/javascript" src="http://disqus.com/api/3.0/forums/listPosts.jsonp?forum=blogofchin&api_key=serAOVRGjETfaY9OQNWwpxsLg4F85uWRDhTdrc9rQF6pPp1hmJRf6KWXiggrF1zD&related=thread&callback=recent_comments"></script>
+</section>
+
 
 
 
@@ -595,12 +968,25 @@
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Chin -
+  Copyright &copy; 2013 - Chin -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
 </footer>
   
+
+<script type="text/javascript">
+      var disqus_shortname = 'blogofchin';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
 
 
 
