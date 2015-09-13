@@ -483,7 +483,9 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>释放许可也是简单for循环.现在，我们来看看nonfair和fair的区别。下面是fair类的代码</p>
+<p>释放许可也是简单for循环.我们知道之前CountDownLatch是会由前面的节点唤醒后面的节点，直到整个线程队列都被唤醒。那Semaphore如果也是这样，不就有问题么？那Semaphore是怎么样的呢？从上面的tryReleaseShared代码知道，每次cas成功,tryReleaseShared都会返回true，这样会"唤醒"第二个节点，从AQS的doAcquireSharedInterruptibly方法知道，第二个节点唤醒后，仍在for循环里，在tryAcquireShared返回大于零(即有可用的许可)之前，第二个节点仍会被park住。<strong>这里我觉得tryReleaseShared方法做得不够好，应该是在有许可的时候，再返回true。这样可以避免线程无意义的unpark、park</strong></p>
+
+<p>现在，我们来看看nonfair和fair的区别。下面是fair类的代码</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
