@@ -56,6 +56,12 @@
 </header>
 <div class="category" id="blog-archives">
 <h2>2015</h2><article>
+<h1><a href="/2015/09/14/jdk-yuan-ma-zhi-reentrantlock/">jdk源码阅读之ReentrantLock</a></h1>
+<time datetime="2015-09-14T11:06:57+08:00" pubdate><span class="month">Sep</span> <span class="day">14</span> <span class="year">2015</span></time>
+<footer>
+<span class="categories">posted in <a class="category" href="//categories/jdkyuan-ma-yue-du/">jdk源码阅读</a></span>
+</footer>
+</article><article>
 <h1><a href="/2015/09/04/jdk-yuan-ma-zhi-semaphore/">Jdk源码阅读之semaphore</a></h1>
 <time datetime="2015-09-04T15:18:34+08:00" pubdate><span class="month">Sep</span> <span class="day">04</span> <span class="year">2015</span></time>
 <footer>
@@ -92,7 +98,7 @@
 <h1>文章分类</h1>
 <ul id="categories">
 <li class="category"><a href="/categories/python/">Python (1)</a></li>
-<li class="category"><a href="/categories/jdkyuan-ma-yue-du/">jdk源码阅读 (4)</a></li>
+<li class="category"><a href="/categories/jdkyuan-ma-yue-du/">jdk源码阅读 (5)</a></li>
 <li class="category"><a href="/categories/web-develop/">web develop (1)</a></li>
 <li class="category"><a href="/categories/jia-gou/">架构 (1)</a></li>
 </ul>
@@ -120,6 +126,8 @@
 </li>
 <li class="post">
 <a href="/2015/09/04/jdk-yuan-ma-zhi-semaphore/">Jdk源码阅读之semaphore</a>
+</li><li class="post">
+<a href="/2015/09/14/jdk-yuan-ma-zhi-reentrantlock/">jdk源码阅读之ReentrantLock</a>
 </li></ul>
 </section>
 <section>
@@ -127,17 +135,17 @@
 <script type="text/javascript">
     function recent_comments(obj){
       if(obj.response.length){
-        resault = '<ul>';
+        resault = '&lt;ul&gt;';
         obj.response.forEach(function(response){
-          resault += '<li>';
-          resault += '<a href="'+response.author.profileUrl+'"><img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;"></a>';
-          resault += '<a href="'+response.author.profileUrl+'">'+response.author.name+'</a>：';
-          resault += '<span>'+response.message+'</span><br>'
-          resault += '<a href="'+response.thread.link+'">'+response.thread.title+'</a><br>'
-          resault += 'at <a href="'+response.url+'">'+response.createdAt+'</a>'
-          resault += '</li>';
+          resault += '&lt;li&gt;';
+          resault += '&lt;a href="'+response.author.profileUrl+'"&gt;&lt;img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;"&gt;&lt;/a&gt;';
+          resault += '&lt;a href="'+response.author.profileUrl+'"&gt;'+response.author.name+'&lt;/a&gt;：';
+          resault += '&lt;span&gt;'+response.message+'&lt;/span&gt;&lt;br&gt;'
+          resault += '&lt;a href="'+response.thread.link+'"&gt;'+response.thread.title+'&lt;/a&gt;&lt;br&gt;'
+          resault += 'at &lt;a href="'+response.url+'"&gt;'+response.createdAt+'&lt;/a&gt;'
+          resault += '&lt;/li&gt;';
         });
-        resault += '</ul>';
+        resault += '&lt;/ul&gt;';
         document.write(resault);
       }else{
         document.write("目前沒有回复");
