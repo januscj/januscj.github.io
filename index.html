@@ -2504,7 +2504,7 @@ ConcurrentModificationException。看过官方的文档注释，貌似是为了�
 <h1>文章分类</h1>
 <ul id="categories">
 <li class="category"><a href="/categories/python/">Python (1)</a></li>
-<li class="category"><a href="/categories/jdkyuan-ma-yue-du/">jdk源码阅读 (5)</a></li>
+<li class="category"><a href="/categories/jdkyuan-ma-yue-du/">jdk源码阅读 (7)</a></li>
 <li class="category"><a href="/categories/web-develop/">web develop (1)</a></li>
 <li class="category"><a href="/categories/jia-gou/">架构 (1)</a></li>
 </ul>
@@ -2512,6 +2512,21 @@ ConcurrentModificationException。看过官方的文档注释，貌似是为了�
 <section>
 <h1>近期文章</h1>
 <ul id="recent_posts">
+<li class="post">
+<a href="/2015/10/18/jdk-yuan-ma-zhi-threadlocal/">jdk源码阅读之ThreadLocal</a>
+</li>
+<li class="post">
+<a href="/2015/09/28/jdk-yuan-ma-zhi-reentrantreadwritelock/">jdk源码阅读之ReentrantReadWriteLock</a>
+</li>
+<li class="post">
+<a href="/2015/09/14/jdk-yuan-ma-zhi-reentrantlock/">jdk源码阅读之ReentrantLock</a>
+</li>
+<li class="post">
+<a href="/2015/09/04/jdk-yuan-ma-zhi-semaphore/">Jdk源码阅读之semaphore</a>
+</li>
+<li class="post">
+<a href="/2015/08/13/aqs-tan-jiu/">AQS探究</a>
+</li>
 <li class="post">
 <a href="/2013/10/06/linkedhashmapyuan-ma-fen-xi/">LinkedHashMap源码分析</a>
 </li>
@@ -2526,18 +2541,6 @@ ConcurrentModificationException。看过官方的文档注释，貌似是为了�
 </li>
 <li class="post">
 <a href="/2013/09/23/tornado-plus-sqlalchemyde-shi-wu-guan-li/">Tornado+sqlalchemy的事务管理</a>
-</li>
-<li class="post">
-<a href="/2015/08/13/aqs-tan-jiu/">AQS探究</a>
-</li>
-<li class="post">
-<a href="/2015/09/04/jdk-yuan-ma-zhi-semaphore/">Jdk源码阅读之semaphore</a>
-</li><li class="post">
-<a href="/2015/09/14/jdk-yuan-ma-zhi-reentrantlock/">jdk源码阅读之ReentrantLock</a>
-</li><li class="post">
-<a href="/2015/10/18/jdk-yuan-ma-zhi-threadlocal/">jdk源码阅读之ThreadLocal</a>
-</li><li class="post">
-<a href="/2015/09/28/jdk-yuan-ma-zhi-reentrantreadwritelock/">jdk源码阅读之ReentrantReadWriteLock</a>
 </li></ul>
 </section>
 <section>
@@ -2545,17 +2548,17 @@ ConcurrentModificationException。看过官方的文档注释，貌似是为了�
 <script type="text/javascript">
     function recent_comments(obj){
       if(obj.response.length){
-        resault = '&lt;ul&gt;';
+        resault = '<ul>';
         obj.response.forEach(function(response){
-          resault += '&lt;li&gt;';
-          resault += '&lt;a href="'+response.author.profileUrl+'"&gt;&lt;img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;"&gt;&lt;/a&gt;';
-          resault += '&lt;a href="'+response.author.profileUrl+'"&gt;'+response.author.name+'&lt;/a&gt;：';
-          resault += '&lt;span&gt;'+response.message+'&lt;/span&gt;&lt;br/&gt;'
-          resault += '&lt;a href="'+response.thread.link+'"&gt;'+response.thread.title+'&lt;/a&gt;&lt;br&gt;'
-          resault += 'at &lt;a href="'+response.url+'"&gt;'+response.createdAt+'&lt;/a&gt;;'
-          resault += '&lt;/li&gt;';
+          resault += '<li>';
+          resault += '<a href="'+response.author.profileUrl+'"><img src="'+response.author.avatar.permalink+'" width=32 height=32 style="float: left; margin-right: 5px;">;</a>;';
+          resault += '<a href="'+response.author.profileUrl+'">;'+response.author.name+'</a>;：';
+          resault += '<span>;'+response.message+'</span>;<br/>;'
+          resault += '<a href="'+response.thread.link+'">;'+response.thread.title+'</a>;<br>;'
+          resault += 'at <a href="'+response.url+'">;'+response.createdAt+'</a>;;'
+          resault += '</li>;';
         });
-        resault += '&lt;/ul&gt;';
+        resault += '</ul>;';
         document.write(resault);
       }else{
         document.write("目前沒有回复");
