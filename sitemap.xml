@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
+<loc>http://januscj.github.io/2016/08/02/nettyshi-jian-mo-xing-fen-xi/</loc>
+<lastmod>2016-08-02T17:49:50+08:00</lastmod>
+</url><url>
+<loc>http://januscj.github.io/2016/07/28/nettychu-bu-fen-xi/</loc>
+<lastmod>2016-07-28T20:38:43+08:00</lastmod>
+</url>
 <url>
 <loc>http://januscj.github.io/2013/09/23/tornado-plus-sqlalchemyde-shi-wu-guan-li/</loc>
 <lastmod>2013-09-24T13:06:49+08:00</lastmod>

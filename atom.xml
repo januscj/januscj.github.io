@@ -1,5 +1,646 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><entry>
+<title type="html"><![CDATA[Netty事件模型分析]]></title>
+<link href="http://januscj.github.io/2016/08/02/nettyshi-jian-mo-xing-fen-xi/"/>
+<updated>2016-08-02T17:49:50+08:00</updated>
+<id>http://januscj.github.io/2016/08/02/nettyshi-jian-mo-xing-fen-xi</id>
+<content type="html"><![CDATA[<p>netty中以channel来表示每个连接，用handler来做事件的处理，pipline则是将handler组成了双向链表。事件借助pipline在链表中传播。pipline的整个结构如下：</p>
+
+<p><img src="http://januscj.github.io/images/netty-pipline.png" title="netty pipline结构" ></p>
+
+<p>其中的context指的是ChannelHandlerContext，它维护了channel、hander的引用。</p>
+
+<p>那事件是怎么在pipline中传播的呢？是从头结点开始，还是从尾节点开始呢？又是从哪里出发的呢？</p>
+
+<p>我们从读的事件着手分析，先看事件的源头是哪里。</p>
+
+<p>netty里有不同的io编程模型实现，以Nio为例，对io事件的处理是在NioEventLoop里做的，事件的注册，是下面的这个方法</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">processSelectedKey</span><span class="o">(</span><span class="n">SelectionKey</span> <span class="n">k</span><span class="o">,</span> <span class="n">AbstractNioChannel</span> <span class="n">ch</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">final</span> <span class="n">NioUnsafe</span> <span class="n">unsafe</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="na">unsafe</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(!</span><span class="n">k</span><span class="o">.</span><span class="na">isValid</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>            <span class="c1">// close the channel if the key is not valid anymore</span>
+</span><span class='line'>            <span class="n">unsafe</span><span class="o">.</span><span class="na">close</span><span class="o">(</span><span class="n">unsafe</span><span class="o">.</span><span class="na">voidPromise</span><span class="o">());</span>
+</span><span class='line'>            <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="kt">int</span> <span class="n">readyOps</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="na">readyOps</span><span class="o">();</span>
+</span><span class='line'>            <span class="c1">// Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead</span>
+</span><span class='line'>            <span class="c1">// to a spin loop</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">((</span><span class="n">readyOps</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_READ</span> <span class="o">|</span> <span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_ACCEPT</span><span class="o">))</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">readyOps</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">unsafe</span><span class="o">.</span><span class="na">read</span><span class="o">();</span>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(!</span><span class="n">ch</span><span class="o">.</span><span class="na">isOpen</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="c1">// Connection already closed - no need to handle write.</span>
+</span><span class='line'>                    <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">((</span><span class="n">readyOps</span> <span class="o">&amp;</span> <span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_WRITE</span><span class="o">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="c1">// Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write</span>
+</span><span class='line'>                <span class="n">ch</span><span class="o">.</span><span class="na">unsafe</span><span class="o">().</span><span class="na">forceFlush</span><span class="o">();</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">((</span><span class="n">readyOps</span> <span class="o">&amp;</span> <span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_CONNECT</span><span class="o">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="c1">// remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking</span>
+</span><span class='line'>                <span class="c1">// See https://github.com/netty/netty/issues/924</span>
+</span><span class='line'>                <span class="kt">int</span> <span class="n">ops</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="na">interestOps</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">ops</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_CONNECT</span><span class="o">;</span>
+</span><span class='line'>                <span class="n">k</span><span class="o">.</span><span class="na">interestOps</span><span class="o">(</span><span class="n">ops</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="n">unsafe</span><span class="o">.</span><span class="na">finishConnect</span><span class="o">();</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">CancelledKeyException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">unsafe</span><span class="o">.</span><span class="na">close</span><span class="o">(</span><span class="n">unsafe</span><span class="o">.</span><span class="na">voidPromise</span><span class="o">());</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>我们看到，不同的事件调用unsafe的不同方法，netty对底层socket的操作都是通过unsafe来做的。而unsafe主要由两种不同的实现NioMessageUnsafe和NioByteUnsafe。NioServerSocketChannel使用的是NioMessageUnsafe来做socket操作，NioSocketChannel使用NioByteUnsafe来做soket操作。以服务端的NioMessageUnsafe为例来看下read()方法的实现：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Override</span>
+</span><span class='line'>        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">read</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">assert</span> <span class="nf">eventLoop</span><span class="o">().</span><span class="na">inEventLoop</span><span class="o">();</span>
+</span><span class='line'>            <span class="kd">final</span> <span class="n">ChannelConfig</span> <span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="o">();</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">(!</span><span class="n">config</span><span class="o">.</span><span class="na">isAutoRead</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">isReadPending</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                <span class="c1">// ChannelConfig.setAutoRead(false) was called in the meantime</span>
+</span><span class='line'>                <span class="n">removeReadOp</span><span class="o">();</span>
+</span><span class='line'>                <span class="k">return</span><span class="o">;</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="kd">final</span> <span class="kt">int</span> <span class="n">maxMessagesPerRead</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="na">getMaxMessagesPerRead</span><span class="o">();</span>
+</span><span class='line'>            <span class="kd">final</span> <span class="n">ChannelPipeline</span> <span class="n">pipeline</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">();</span>
+</span><span class='line'>            <span class="kt">boolean</span> <span class="n">closed</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>            <span class="n">Throwable</span> <span class="n">exception</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>                <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+</span><span class='line'>                        <span class="kt">int</span> <span class="n">localRead</span> <span class="o">=</span> <span class="n">doReadMessages</span><span class="o">(</span><span class="n">readBuf</span><span class="o">);</span>
+</span><span class='line'>                        <span class="k">if</span> <span class="o">(</span><span class="n">localRead</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                            <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>                        <span class="o">}</span>
+</span><span class='line'>                        <span class="k">if</span> <span class="o">(</span><span class="n">localRead</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                            <span class="n">closed</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>                            <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>                        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>                        <span class="c1">// stop reading and remove op</span>
+</span><span class='line'>                        <span class="k">if</span> <span class="o">(!</span><span class="n">config</span><span class="o">.</span><span class="na">isAutoRead</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                            <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>                        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>                        <span class="k">if</span> <span class="o">(</span><span class="n">readBuf</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">&gt;=</span> <span class="n">maxMessagesPerRead</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                            <span class="k">break</span><span class="o">;</span>
+</span><span class='line'>                        <span class="o">}</span>
+</span><span class='line'>                    <span class="o">}</span>
+</span><span class='line'>                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">t</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">exception</span> <span class="o">=</span> <span class="n">t</span><span class="o">;</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>                <span class="n">setReadPending</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>                <span class="kt">int</span> <span class="n">size</span> <span class="o">=</span> <span class="n">readBuf</span><span class="o">.</span><span class="na">size</span><span class="o">();</span>
+</span><span class='line'>                <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="o">;</span> <span class="n">i</span> <span class="o">++)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">pipeline</span><span class="o">.</span><span class="na">fireChannelRead</span><span class="o">(</span><span class="n">readBuf</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">));</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="n">readBuf</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+</span><span class='line'>                <span class="n">pipeline</span><span class="o">.</span><span class="na">fireChannelReadComplete</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">exception</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="k">if</span> <span class="o">(</span><span class="n">exception</span> <span class="k">instanceof</span> <span class="n">IOException</span> <span class="o">&amp;&amp;</span> <span class="o">!(</span><span class="n">exception</span> <span class="k">instanceof</span> <span class="n">PortUnreachableException</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>                        <span class="c1">// ServerChannel should not be closed even on IOException because it can often continue</span>
+</span><span class='line'>                        <span class="c1">// accepting incoming connections. (e.g. too many open files)</span>
+</span><span class='line'>                        <span class="n">closed</span> <span class="o">=</span> <span class="o">!(</span><span class="n">AbstractNioMessageChannel</span><span class="o">.</span><span class="na">this</span> <span class="k">instanceof</span> <span class="n">ServerChannel</span><span class="o">);</span>
+</span><span class='line'>                    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>                    <span class="n">pipeline</span><span class="o">.</span><span class="na">fireExceptionCaught</span><span class="o">(</span><span class="n">exception</span><span class="o">);</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(</span><span class="n">closed</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="k">if</span> <span class="o">(</span><span class="n">isOpen</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                        <span class="n">close</span><span class="o">(</span><span class="n">voidPromise</span><span class="o">());</span>
+</span><span class='line'>                    <span class="o">}</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+</span><span class='line'>                <span class="c1">// Check if there is a readPending which was not processed yet.</span>
+</span><span class='line'>                <span class="c1">// This could be for two reasons:</span>
+</span><span class='line'>                <span class="c1">// * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method</span>
+</span><span class='line'>                <span class="c1">// * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method</span>
+</span><span class='line'>                <span class="c1">//</span>
+</span><span class='line'>                <span class="c1">// See https://github.com/netty/netty/issues/2254</span>
+</span><span class='line'>                <span class="k">if</span> <span class="o">(!</span><span class="n">config</span><span class="o">.</span><span class="na">isAutoRead</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">isReadPending</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">removeReadOp</span><span class="o">();</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>关键在读数据的时候的那个for循环，调用pipline.fireChannelRead()这个是读事件的出发源头，读完成的触发也在这个方法里触发 pipeline.fireChannelReadComplete()。</p>
+
+<p>下面来分析事件是如何在pipline中传播的，先来看pipline的fireChannelRead()方法代码：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="n">ChannelPipeline</span> <span class="nf">fireChannelRead</span><span class="o">(</span><span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">head</span><span class="o">.</span><span class="na">fireChannelRead</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="k">this</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+</entry><entry>
+<title type="html"><![CDATA[Netty初步分析]]></title>
+<link href="http://januscj.github.io/2016/07/28/nettychu-bu-fen-xi/"/>
+<updated>2016-07-28T20:38:43+08:00</updated>
+<id>http://januscj.github.io/2016/07/28/nettychu-bu-fen-xi</id>
+<content type="html"><![CDATA[<p>网络通讯是分布式架构的基础，而netty作为网络通讯的基础库，被广泛应用在各种中间件中。深入分析netty很有必要。</p>
+
+<p>从一个demo来了解netty，先看server端代码</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>
+</span><span class='line'> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">TcpServer</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="kt">int</span> <span class="n">port</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">TcpServer</span><span class="o">(</span><span class="kt">int</span> <span class="n">port</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">port</span> <span class="o">=</span> <span class="n">port</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">EventLoopGroup</span> <span class="n">bossGroup</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">NioEventLoopGroup</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">EventLoopGroup</span> <span class="n">workerGroup</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">NioEventLoopGroup</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">ServerBootstrap</span> <span class="n">b</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ServerBootstrap</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">b</span><span class="o">.</span><span class="na">group</span><span class="o">(</span><span class="n">bossGroup</span><span class="o">,</span> <span class="n">workerGroup</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">.</span><span class="na">channel</span><span class="o">(</span><span class="n">NioServerSocketChannel</span><span class="o">.</span><span class="na">class</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">.</span><span class="na">childHandler</span><span class="o">(</span><span class="k">new</span> <span class="n">ChannelInitializer</span><span class="o">&lt;</span><span class="n">SocketChannel</span><span class="o">&gt;()</span> <span class="o">{</span> <span class="c1">// (4)</span>
+</span><span class='line'>                        <span class="nd">@Override</span>
+</span><span class='line'>                        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">initChannel</span><span class="o">(</span><span class="n">SocketChannel</span> <span class="n">ch</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>                            <span class="n">ch</span><span class="o">.</span><span class="na">pipeline</span><span class="o">().</span><span class="na">addLast</span><span class="o">(</span><span class="k">new</span> <span class="nf">StringEncoder</span><span class="o">(</span><span class="n">CharsetUtil</span><span class="o">.</span><span class="na">UTF_8</span><span class="o">),</span> <span class="k">new</span> <span class="nf">StringDecoder</span><span class="o">(</span><span class="n">CharsetUtil</span><span class="o">.</span><span class="na">UTF_8</span><span class="o">)).</span>
+</span><span class='line'>                                    <span class="n">addLast</span><span class="o">(</span><span class="k">new</span> <span class="nf">ServerHandler</span><span class="o">(</span><span class="n">SessionManager</span><span class="o">.</span><span class="na">getManager</span><span class="o">()));</span>
+</span><span class='line'>                        <span class="o">}</span>
+</span><span class='line'>                    <span class="o">})</span>
+</span><span class='line'>                    <span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">SO_BACKLOG</span><span class="o">,</span> <span class="mi">128</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">SO_KEEPALIVE</span><span class="o">,</span> <span class="kc">true</span><span class="o">)</span>
+</span><span class='line'>                    <span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">TCP_NODELAY</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">//启动推送消息线程</span>
+</span><span class='line'>            <span class="n">Thread</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="o">(</span><span class="k">new</span> <span class="nf">PushRun</span><span class="o">(</span><span class="k">new</span> <span class="nf">PushMessage</span><span class="o">()));</span>
+</span><span class='line'>            <span class="n">t</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">ChannelFuture</span> <span class="n">f</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="na">bind</span><span class="o">(</span><span class="n">port</span><span class="o">).</span><span class="na">sync</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">f</span><span class="o">.</span><span class="na">channel</span><span class="o">().</span><span class="na">closeFuture</span><span class="o">().</span><span class="na">sync</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">workerGroup</span><span class="o">.</span><span class="na">shutdownGracefully</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">bossGroup</span><span class="o">.</span><span class="na">shutdownGracefully</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">class</span> <span class="nc">PushRun</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">private</span> <span class="n">PushMessage</span> <span class="n">pushMessage</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="nf">PushRun</span><span class="o">(</span><span class="n">PushMessage</span> <span class="n">pushMessage</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">this</span><span class="o">.</span><span class="na">pushMessage</span> <span class="o">=</span> <span class="n">pushMessage</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>            <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>            <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">i</span><span class="o">++;</span>
+</span><span class='line'>                <span class="n">pushMessage</span><span class="o">.</span><span class="na">sendMsg</span><span class="o">(</span><span class="s">&quot;send msg:&quot;</span> <span class="o">+</span> <span class="n">i</span><span class="o">,</span> <span class="mi">34445L</span><span class="o">);</span>
+</span><span class='line'>                <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">500L</span><span class="o">);</span>
+</span><span class='line'>                <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">port</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">args</span><span class="o">.</span><span class="na">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">port</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">args</span><span class="o">[</span><span class="mi">0</span><span class="o">]);</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">port</span> <span class="o">=</span> <span class="mi">4199</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">new</span> <span class="nf">TcpServer</span><span class="o">(</span><span class="n">port</span><span class="o">).</span><span class="na">run</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>我们看到先是创建了两个EventLoopGroup，eventLoopGroup是什么，先姑且理解为线程组的概念，后面的文章再详细分析netty的线程模型。然后创建ServerBootStrap，设置上面的两个eventGroup，再就是设置handler，channelInit的时候加入StringEncoder,StringDecoder,业务逻辑处理ServerHandler，再就是一些参数的设置，是否启用NODELAY等。</p>
+
+<p>服务端执行b.bind()之后就开始监听客户端的连接，具体的业务逻辑的处理在ServerHandler里做。我们看下ServerHandler的代码，</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ServerHandler</span> <span class="kd">extends</span> <span class="n">ChannelInboundHandlerAdapter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">SessionManager</span> <span class="n">sessionManager</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">public</span> <span class="nf">ServerHandler</span><span class="o">(</span><span class="n">SessionManager</span> <span class="n">sessionManager</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">this</span><span class="o">.</span><span class="na">sessionManager</span> <span class="o">=</span> <span class="n">sessionManager</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelRead</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;receive from client:&quot;</span> <span class="o">+</span> <span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">TcpProtocol</span> <span class="n">tcpProtocol</span> <span class="o">=</span> <span class="n">JSON</span><span class="o">.</span><span class="na">parseObject</span><span class="o">((</span><span class="n">String</span><span class="o">)</span> <span class="n">msg</span><span class="o">,</span> <span class="n">TcpProtocol</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">sessionManager</span><span class="o">.</span><span class="na">addSession</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">tcpProtocol</span><span class="o">.</span><span class="na">getUid</span><span class="o">()),</span> <span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelRegistered</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">.</span><span class="na">channelRegistered</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;channel registered....&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelActive</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">.</span><span class="na">channelActive</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;channel active.....&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelInactive</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">.</span><span class="na">channelInactive</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">exceptionCaught</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">Throwable</span> <span class="n">cause</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// (4)</span>
+</span><span class='line'>        <span class="n">cause</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">ctx</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ServerHandler继承自ChannelInboundHandlerAdapter，覆盖了一些方法，channelRegistered、channelActive、channelRead、channelInactive，这些方法分别在channel生命周期的不同阶段调用，由此看来，netty是事件编程模型的。</p>
+
+<p>接着看客户端的代码：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">ublic</span> <span class="kd">class</span> <span class="nc">TcpClient</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">String</span> <span class="n">host</span> <span class="o">=</span> <span class="n">args</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">port</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">args</span><span class="o">[</span><span class="mi">1</span><span class="o">]);</span>
+</span><span class='line'>        <span class="n">EventLoopGroup</span> <span class="n">workerGroup</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">NioEventLoopGroup</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">Bootstrap</span> <span class="n">b</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Bootstrap</span><span class="o">();</span> <span class="c1">// (1)</span>
+</span><span class='line'>            <span class="n">b</span><span class="o">.</span><span class="na">group</span><span class="o">(</span><span class="n">workerGroup</span><span class="o">);</span> <span class="c1">// (2)</span>
+</span><span class='line'>            <span class="n">b</span><span class="o">.</span><span class="na">channel</span><span class="o">(</span><span class="n">NioSocketChannel</span><span class="o">.</span><span class="na">class</span><span class="o">);</span> <span class="c1">// (3)</span>
+</span><span class='line'>            <span class="n">b</span><span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">SO_KEEPALIVE</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">b</span><span class="o">.</span><span class="na">handler</span><span class="o">(</span><span class="k">new</span> <span class="n">ChannelInitializer</span><span class="o">&lt;</span><span class="n">SocketChannel</span><span class="o">&gt;()</span> <span class="o">{</span>
+</span><span class='line'>                <span class="nd">@Override</span>
+</span><span class='line'>                <span class="kd">public</span> <span class="kt">void</span> <span class="nf">initChannel</span><span class="o">(</span><span class="n">SocketChannel</span> <span class="n">ch</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">ch</span><span class="o">.</span><span class="na">pipeline</span><span class="o">().</span><span class="na">addLast</span><span class="o">(</span><span class="k">new</span> <span class="nf">StringEncoder</span><span class="o">(</span><span class="n">CharsetUtil</span><span class="o">.</span><span class="na">UTF_8</span><span class="o">),</span>
+</span><span class='line'>                            <span class="k">new</span> <span class="nf">StringDecoder</span><span class="o">(</span><span class="n">CharsetUtil</span><span class="o">.</span><span class="na">UTF_8</span><span class="o">)).</span><span class="na">addLast</span><span class="o">(</span><span class="k">new</span> <span class="nf">ClientHandler</span><span class="o">());</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">});</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// Start the client.</span>
+</span><span class='line'>            <span class="n">ChannelFuture</span> <span class="n">f</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="na">connect</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">).</span><span class="na">sync</span><span class="o">();</span> <span class="c1">// (5)</span>
+</span><span class='line'>            <span class="n">TcpProtocol</span> <span class="n">tcpProtocol</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">TcpProtocol</span><span class="o">();</span>
+</span><span class='line'>            <span class="n">tcpProtocol</span><span class="o">.</span><span class="na">setUid</span><span class="o">(</span><span class="mi">34445L</span><span class="o">);</span>
+</span><span class='line'>            <span class="n">f</span><span class="o">.</span><span class="na">channel</span><span class="o">().</span><span class="na">writeAndFlush</span><span class="o">(</span><span class="n">JSON</span><span class="o">.</span><span class="na">toJSONString</span><span class="o">(</span><span class="n">tcpProtocol</span><span class="o">));</span>
+</span><span class='line'>            <span class="kd">synchronized</span> <span class="o">(</span><span class="n">TcpClient</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">TcpClient</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">wait</span><span class="o">();</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">workerGroup</span><span class="o">.</span><span class="na">shutdownGracefully</span><span class="o">();</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<p>客户端因为不需要处理连接的监听，所以只创建了一个EventLoopGroup。同样具体的业务处理的逻辑放在Handler里处理，ClientHandler代码如下:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kn">package</span> <span class="n">netty</span><span class="o">;</span> <span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Created by Administrator on 2016/7/13.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'>
+</span><span class='line'><span class="kn">import</span> <span class="nn">io.netty.channel.ChannelHandlerContext</span><span class="o">;</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">io.netty.channel.ChannelInboundHandlerAdapter</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClientHandler</span> <span class="kd">extends</span> <span class="n">ChannelInboundHandlerAdapter</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelRead</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">exceptionCaught</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">Throwable</span> <span class="n">cause</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">cause</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">ctx</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelActive</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="kd">super</span><span class="o">.</span><span class="na">channelActive</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>覆盖channelRead方法只是输出接受到的消息。</p>
+
+<p>我们看到，不管是Server还是Client，netty都是基于事件来做业务的处理，那事件是传播开来的，事件的触发源在哪里呢？下一篇文章详细分析netty的事件传播。</p>
+]]></content>
+</entry><entry>
 <title type="html">jdk源码阅读之ThreadLocal</title>
 <link href="http://januscj.github.io/2015/10/18/jdk-yuan-ma-zhi-threadlocal/"/>
 <updated>2015-10-18T20:40:24+08:00</updated>
@@ -109,7 +750,7 @@
 &lt;span class='line-number'&gt;32&lt;/span&gt;
 &lt;/pre&gt;&lt;/td&gt;&lt;td class='code'&gt;&lt;pre&gt;&lt;code class='java'&gt;&lt;span class='line'&gt;&lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;set&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ThreadLocal&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Object&lt;/span&gt; &lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;
-&lt;/span&gt;&lt;span class='line'&gt;            &lt;span class="c1"&gt;// We don&#39;t use a fast path as with get() because it is at&lt;/span&gt;
+&lt;/span&gt;&lt;span class='line'&gt;            &lt;span class="c1"&gt;// We don't use a fast path as with get() because it is at&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;            &lt;span class="c1"&gt;// least as common to use set() to create new entries as&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;            &lt;span class="c1"&gt;// it is to replace existing ones, in which case, a fast&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;            &lt;span class="c1"&gt;// path would fail more often than not.&lt;/span&gt;
@@ -391,7 +1032,7 @@
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="c1"&gt;// else we hold the exclusive lock; blocking here&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="c1"&gt;// would cause deadlock.&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="nf"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;readerShouldBlock&lt;/span&gt;&lt;span class="o"&gt;())&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="c1"&gt;// Make sure we&#39;re not acquiring read lock reentrantly&lt;/span&gt;
+&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="c1"&gt;// Make sure we're not acquiring read lock reentrantly&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;firstReader&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;current&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                        &lt;span class="c1"&gt;// assert firstReaderHoldCount &gt; 0;&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
@@ -408,7 +1049,7 @@
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="o"&gt;}&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="o"&gt;}&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sharedCount&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;MAX_COUNT&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;
-&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;throw&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nf"&gt;Error&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&quot;Maximum lock count exceeded&quot;&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;throw&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nf"&gt;Error&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"Maximum lock count exceeded"&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;compareAndSetState&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;SHARED_UNIT&lt;/span&gt;&lt;span class="o"&gt;))&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sharedCount&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                        &lt;span class="n"&gt;firstReader&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;current&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
@@ -554,7 +1195,7 @@
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;w&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="o"&gt;||&lt;/span&gt; &lt;span class="n"&gt;current&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;getExclusiveOwnerThread&lt;/span&gt;&lt;span class="o"&gt;())&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;w&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;exclusiveCount&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;acquires&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&gt;&lt;/span&gt; &lt;span class="n"&gt;MAX_COUNT&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;
-&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;throw&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nf"&gt;Error&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&quot;Maximum lock count exceeded&quot;&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;span class='line'&gt;                    &lt;span class="k"&gt;throw&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nf"&gt;Error&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"Maximum lock count exceeded"&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="c1"&gt;// Reentrant acquire&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="n"&gt;setState&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;acquires&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/span&gt;&lt;span class='line'&gt;                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
