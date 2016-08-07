@@ -9,7 +9,7 @@
   <meta name="author" content="jean">
 
   
-  <meta name="description" content="netty中以channel来表示每个连接，用handler来做事件的处理，pipline则是将handler组成了双向链表。事件借助pipline在链表中传播。pipline的整个结构如下： 其中的context指的是ChannelHandlerContext，它维护了channel、 &hellip;">
+  <meta name="description" content="netty中以channel来表示每个连接，用handler来做事件的处理，pipline则是将handler组成了双向链表。事件借助pipline在链表中传播，pipline的整个结构如下： 其中的context指的是ChannelHandlerContext，它维护了channel、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -84,7 +84,7 @@
   </header>
 
 
-<div class="entry-content"><p>netty中以channel来表示每个连接，用handler来做事件的处理，pipline则是将handler组成了双向链表。事件借助pipline在链表中传播。pipline的整个结构如下：</p>
+<div class="entry-content"><p>netty中以channel来表示每个连接，用handler来做事件的处理，pipline则是将handler组成了双向链表。事件借助pipline在链表中传播，pipline的整个结构如下：</p>
 
 <p><img src="/images/netty-pipline.png" title="netty pipline结构" ></p>
 
@@ -247,7 +247,7 @@
 <span class='line-number'>72</span>
 <span class='line-number'>73</span>
 <span class='line-number'>74</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Override</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>        <span class="nd">@Override</span>
 </span><span class='line'>        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">read</span><span class="o">()</span> <span class="o">{</span>
 </span><span class='line'>            <span class="k">assert</span> <span class="nf">eventLoop</span><span class="o">().</span><span class="na">inEventLoop</span><span class="o">();</span>
 </span><span class='line'>            <span class="kd">final</span> <span class="n">ChannelConfig</span> <span class="n">config</span> <span class="o">=</span> <span class="n">config</span><span class="o">();</span>
@@ -324,7 +324,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>关键在读数据的时候的那个for循环，调用pipline.fireChannelRead()这个是读事件的出发源头，读完成的触发也在这个方法里触发 pipeline.fireChannelReadComplete()。</p>
+<p>关键在读数据的时候的那个for循环，调用pipline.fireChannelRead()这个是读事件的触发源头，读完成的触发也在这个方法里触发 pipeline.fireChannelReadComplete()。</p>
 
 <p>下面来分析事件是如何在pipline中传播的，先来看pipline的fireChannelRead()方法代码：</p>
 
@@ -333,13 +333,111 @@
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>   <span class="nd">@Override</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="nd">@Override</span>
 </span><span class='line'>    <span class="kd">public</span> <span class="n">ChannelPipeline</span> <span class="nf">fireChannelRead</span><span class="o">(</span><span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>        <span class="n">head</span><span class="o">.</span><span class="na">fireChannelRead</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
 </span><span class='line'>        <span class="k">return</span> <span class="k">this</span><span class="o">;</span>
 </span><span class='line'>    <span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
+
+<p>由此可见读事件是从head开始触发的(<strong>所有的inbound事件都是从head开始触发的</strong>)，接着分析head节点的fireChannelRead,head节点是AbstractChannelHandlerContext的一个实例，具体实现在抽象类已经做了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="n">ChannelHandlerContext</span> <span class="nf">fireChannelRead</span><span class="o">(</span><span class="kd">final</span> <span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">msg</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="k">throw</span> <span class="k">new</span> <span class="nf">NullPointerException</span><span class="o">(</span><span class="s">&quot;msg&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">final</span> <span class="n">AbstractChannelHandlerContext</span> <span class="n">next</span> <span class="o">=</span> <span class="n">findContextInbound</span><span class="o">();</span>
+</span><span class='line'>        <span class="n">EventExecutor</span> <span class="n">executor</span> <span class="o">=</span> <span class="n">next</span><span class="o">.</span><span class="na">executor</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">executor</span><span class="o">.</span><span class="na">inEventLoop</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">next</span><span class="o">.</span><span class="na">invokeChannelRead</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">executor</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="k">new</span> <span class="nf">OneTimeTask</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>                <span class="nd">@Override</span>
+</span><span class='line'>                <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>                    <span class="n">next</span><span class="o">.</span><span class="na">invokeChannelRead</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>                <span class="o">}</span>
+</span><span class='line'>            <span class="o">});</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="k">return</span> <span class="k">this</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>findContextInbound()回从pipline的handlerContext链表里获取一个inboundHander来调用invokeChannelRead()，findContextInbound()的逻辑如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="n">AbstractChannelHandlerContext</span> <span class="nf">findContextInbound</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">AbstractChannelHandlerContext</span> <span class="n">ctx</span> <span class="o">=</span> <span class="k">this</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">do</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">ctx</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">ctx</span><span class="o">.</span><span class="na">inbound</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">ctx</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>从代码可以看出，它会从头节点开始直到找到InboundHandler节点，接着调用节点的invokeChannelRead()方法：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">invokeChannelRead</span><span class="o">(</span><span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>            <span class="o">((</span><span class="n">ChannelInboundHandler</span><span class="o">)</span> <span class="n">handler</span><span class="o">()).</span><span class="na">channelRead</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">t</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">notifyHandlerException</span><span class="o">(</span><span class="n">t</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>     <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>AbstractChannelHandlerContext的invokeChannelRead方法实际上是调用这个context里的handler的channelRead()方法。我们知道ChannelInboundHandlerAdapter的channelRead方法代码如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="nd">@Override</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">channelRead</span><span class="o">(</span><span class="n">ChannelHandlerContext</span> <span class="n">ctx</span><span class="o">,</span> <span class="n">Object</span> <span class="n">msg</span><span class="o">)</span> <span class="kd">throws</span>    <span class="n">Exception</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">ctx</span><span class="o">.</span><span class="na">fireChannelRead</span><span class="o">(</span><span class="n">msg</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>它只是接着调用AbstractChannelHandlerContext的fireChannelRead()，fireChannelRead()又会从当前节点开始寻找下一个inbound context，这样事件就传递下去了。</p>
 </div>
 
 
